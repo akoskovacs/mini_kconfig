@@ -74,8 +74,11 @@ class Option:
 
     @staticmethod 
     def parse_help(tk, sym):
-        while tk.current_token() != '\n':
-            tk.get_token()
+        if not tk.at_nl():
+            tk.error("help blocks must start with a new line character")
+        # Ignore the whole line, too
+        while tk.get_token() != '\n':
+            pass
 
     @staticmethod 
     def parse_depends_on(tk, sym):
@@ -114,8 +117,11 @@ class Option:
             Option.parse_prompt(tk, sym)    
         elif tok == 'help' or tok == '--help--':
             Option.parse_help(tk, sym)
+        elif tok == '' or tok == 'endmenu' or tok == 'config':
+            tk.put_token(tok)
+            return False
         elif tok == '\n':
-            return 
+            return True
         else:
             tk.put_token(tok)
             return False
@@ -230,7 +236,8 @@ class Symbol:
         self.is_selected = True
         for sel in self.selects:
             if sel != None:
-                sel.select()
+                pass
+                #sel.select()
 
     def set_type(self, t, prompt = None):
         self.type = t
@@ -257,9 +264,8 @@ class Symbol:
             tk.error("Unexpected token after config")
             tk.put_back()
 
-        while tk.current_token() != 'config' and tk.current_token() != 'endmenu' and tk.current_token() != '':
-            if not Option.parse(tk, sym):
-                return sym
+        while Option.parse(tk, sym):
+                pass
         return sym
 
 class Menu:
@@ -403,11 +409,11 @@ def read_selects(fname):
 opts = OptionParser("mini_kconfig.py [options] Kconfig")
 opts.add_option("-d", "--no-defaults", dest="no_defaults", default=False, action="store_true",
                   help="don't include the default config symbols")
-opts.add_option("-o", "--output",
+opts.add_option("-o", "--output", metavar="FILE",
                   dest="output", default=".config", help="The output file")
-opts.add_option("-s", "--select",
+opts.add_option("-s", "--select", metavar="LIST",
                   dest="select", default="", help="A comma separated list of symbols to select")
-opts.add_option("-S", "--select-from",
+opts.add_option("-S", "--select-from", metavar="FILE",
                   dest="select_from", default="", help="File enumerating the config symbols to select")
 (options, args) = opts.parse_args()
 
