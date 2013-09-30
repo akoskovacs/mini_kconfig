@@ -7,7 +7,7 @@ class Tokenizer:
     """Basic tokenizer built on shlex"""
     def __init__(self, stream):
         self.lexer = shlex.shlex(stream)
-        #t okenize newlines too
+        # tokenize newlines too
         self.lexer.whitespace=' \t\r'
         self.curr_token = ''
 
@@ -113,15 +113,17 @@ class Option:
         elif tok == 'prompt':
             Option.parse_prompt(tk, sym)    
         elif tok == 'help' or tok == '--help--':
-            Option.parse_help(tk)    
+            Option.parse_help(tk, sym)
         elif tok == '\n':
             return 
         else:
             tk.put_token(tok)
             return False
 
+        # shlex ignores the newline character if a comment is
+        # parsed (we can't rely on \n)
         if not tk.at_nl():
-            tk.error("Unexpected token after \'%s\'" % tok)
+            tk.put_token()
         return True
 
 class Symbol:
@@ -394,13 +396,11 @@ def read_selects(fname):
         if tok == '\n' or tok == ',' or tok == ';':
             continue
         else:
-            sels.append(tk.current_token())
+            sels.append(tk.current_token().strip())
     return sels
 
 ### main()
-opts = OptionParser()
-opts.add_option("-k", "--kconfig", dest="filename",
-                  help="Kconfig to parse [Kconfig]", metavar="KCONFIG", default="Kconfig")
+opts = OptionParser("mini_kconfig.py [options] Kconfig")
 opts.add_option("-d", "--no-defaults", dest="no_defaults", default=False, action="store_true",
                   help="don't include the default config symbols")
 opts.add_option("-o", "--output",
@@ -411,7 +411,12 @@ opts.add_option("-S", "--select-from",
                   dest="select_from", default="", help="File enumerating the config symbols to select")
 (options, args) = opts.parse_args()
 
-parse_file(options.filename, None)
+if len(args) != 1:
+    kfile = "Kconfig"
+else:
+    kfile = args[0]
+
+parse_file(kfile, None)
 resolve_symbols()
 fix_dependencies()
 
