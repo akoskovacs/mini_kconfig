@@ -386,11 +386,22 @@ def select_defaults():
         if sym.is_default:
             sym.select()
 
+def read_selects(fname):
+    tk = Tokenizer(file(fname, 'rt'))
+    sels = []
+    while tk.get_token() != '':
+        tok = tk.current_token()
+        if tok == '\n' or tok == ',' or tok == ';':
+            continue
+        else:
+            sels.append(tk.current_token())
+    return sels
+
 ### main()
 opts = OptionParser()
 opts.add_option("-k", "--kconfig", dest="filename",
                   help="Kconfig to parse [Kconfig]", metavar="KCONFIG", default="Kconfig")
-opts.add_option("-d", "--no-default", dest="no_default", default=False,action="store_false",
+opts.add_option("-d", "--no-defaults", dest="no_defaults", default=False, action="store_true",
                   help="don't include the default config symbols")
 opts.add_option("-o", "--output",
                   dest="output", default=".config", help="The output file")
@@ -403,9 +414,13 @@ opts.add_option("-S", "--select-from",
 parse_file(options.filename, None)
 resolve_symbols()
 fix_dependencies()
-if not options.no_default:
+
+if not options.no_defaults:
     select_defaults()
+
 if options.select != "":
     select_configs(options.select.split(','))
 
+if options.select_from != "":
+    select_configs(read_selects(options.select_from))
 write_selected_to(options.output)
