@@ -3,6 +3,13 @@
 import shlex
 from optparse import OptionParser
 
+try:
+    import pygraphviz as pgv
+    kgraph = pgv.AGraph()
+    has_graphviz = True
+except ImportError:
+    has_graphviz = False
+
 class Tokenizer:
     """Basic tokenizer built on shlex"""
     def __init__(self, stream):
@@ -198,8 +205,10 @@ class Symbol:
         """Substitute config names with the objects themselves in depends_on"""
         new_deps = []
         for dep in self.depends_on:
-            if dep == self.name:
-                self.error("config \'%s\' cannot depends on itself" % self.name)
+            if dep == self.symbol:
+                self.error("config \'%s\' cannot depends on itself" % self.symbol)
+            if has_graphviz:
+                kgraph.add_edge(self.symbol, dep)
             nd = Symbol.get_symbol(dep)
             nd.add_dependant(self)
             new_deps.append(nd)
@@ -420,6 +429,9 @@ opts.add_option("-s", "--select", metavar="LIST",
                   dest="select", default="", help="A comma separated list of symbols to select")
 opts.add_option("-S", "--select-from", metavar="FILE",
                   dest="select_from", default="", help="File enumerating the config symbols to select")
+if has_graphviz:
+    opts.add_option("-g", "--graph", metavar="FILE",
+                      dest="graph_file", default="kconfig-deps.png", help="Write the visual dependency graph to a file")
 (options, args) = opts.parse_args()
 
 if len(args) != 1:
@@ -439,4 +451,10 @@ if options.select != "":
 
 if options.select_from != "":
     select_configs(read_selects(options.select_from))
+
+if has_graphviz and options.graph_file != "":
+    kgraph.string()
+    kgraph.layout(prog='fdp')
+    kgraph.draw(options.graph_file)
+
 write_selected_to(options.output)
