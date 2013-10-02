@@ -336,7 +336,12 @@ def parse(tk, parent):
         tk.error("Unknown token \'%s\'" % tok)
 
 def parse_file(fname, parent):
-    tk = Tokenizer(file(fname, 'rt'))
+    try:
+        tk = Tokenizer(file(fname, 'rt'))
+    except IOError:
+        print("Error: File \'%s\' is not found" % fname)
+        exit(1)
+
     if tk.get_token() == 'mainmenu':
         Menu.main_menu_name = Option.parse_string(tk, tk.get_token())
         if not tk.at_nl():
